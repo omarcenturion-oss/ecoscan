@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EcoScan Lima</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(160deg,#02140f,#064e3b,#16a34a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:16px;font-family:"DM Sans",sans-serif}
+.frame{width:360px;background:#0f172a;border-radius:44px;padding:8px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.screen{width:100%;height:720px;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(180deg,#022c22 0%,#065f46 50%,#ecfdf5 100%)}
+.hdr{padding:16px 18px 10px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.hdr-sub{font-size:11px;opacity:.7}
+.hdr-title{font-family:"Syne",sans-serif;font-weight:800;font-size:17px}
+.coin-badge{background:rgba(255,255,255,.15);padding:8px 13px;border-radius:14px;font-weight:700;font-size:13px;color:#fbbf24;border:1px solid rgba(255,255,255,.15)}
+.content{flex:1;overflow-y:auto;padding:14px;overflow-x:hidden}
+.content::-webkit-scrollbar{width:3px}
+.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+.glass{background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border-radius:24px;padding:18px;color:#fff;border:1px solid rgba(255,255,255,.2);margin-bottom:14px}
+.card{background:#fff;border-radius:24px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.08);margin-bottom:14px}
+.card h2{color:#1a2e1a;font-family:"Syne",sans-serif;font-weight:700;font-size:18px;margin-bottom:8px}
+.card h3{color:#1a2e1a;font-family:"Syne",sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
+.btn{background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;border:none;padding:14px;border-radius:16px;width:100%;margin-top:14px;font-weight:700;font-size:14px;cursor:pointer;font-family:"DM Sans",sans-serif;transition:opacity .2s}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8)}
+.btn-sm{color:#fff;border:none;padding:9px 13px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;font-family:"DM Sans",sans-serif}
+.nav{background:#fff;padding:10px;display:flex;justify-content:space-around;border-top:1px solid #e5e7eb;flex-shrink:0}
+.nav-btn{background:transparent;border:none;font-size:11px;color:#374151;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 8px;border-radius:10px;transition:background .15s;font-family:"DM Sans",sans-serif}
+.nav-btn:hover{background:#f0fdf4}
+.nav-btn .ico{font-size:20px}
+.tag{background:rgba(255,255,255,.18);padding:10px 12px;border-radius:14px;flex:1;text-align:center;font-weight:600;font-size:13px;color:#fff}
+input,select{width:100%;padding:13px;border-radius:14px;border:1.5px solid #d1d5db;margin-top:12px;font-family:"DM Sans",sans-serif;font-size:14px;outline:none;color:#1a2e1a;background:#fff}
+input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.screen-view{display:none}
+.screen-view.active{display:block}
+#map-container{width:100%;height:280px;border-radius:20px;overflow:hidden;margin-top:14px;border:2px solid #bbf7d0}
+.progress-bar{width:100%;height:8px;background:#e5e7eb;border-radius:20px;margin-top:16px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:20px;animation:prog 4s ease-out forwards}
+@keyframes prog{from{width:0%}to{width:95%}}
+.green-box{background:#dcfce7;padding:16px;border-radius:16px}
+.blue-box{background:#eff6ff;padding:13px;border-radius:14px;font-size:13px;color:#1e3a8a;margin-top:12px}
+.gray-box{background:#f9fafb;padding:14px;border-radius:14px;font-size:13px;color:#374151;line-height:1.7;margin-top:12px}
+.lime-box{background:#ecfccb;padding:13px;border-radius:14px;font-size:13px;color:#3f6212;margin-top:14px}
+.privacy-box{background:#f0fdf4;padding:13px;border-radius:14px;font-size:13px;color:#14532d;margin-top:14px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.stat-card{padding:14px;border-radius:16px}
+.benefit-list{margin-top:12px;line-height:2;font-size:14px;color:#1f3d1f}
+.dashboard-stats{margin-top:16px;line-height:2;font-size:14px;color:#1f3d1f}
+.ai-thinking{display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7280;margin-top:12px}
+.dot-pulse{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+video{width:100%;height:100%;object-fit:cover;border-radius:20px;display:block}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="screen">
+    <div class="hdr">
+      <div>
+        <div class="hdr-sub">EcoScan IA</div>
+        <div class="hdr-title">Plataforma Inteligente</div>
+      </div>
+      <div class="coin-badge">🪙 <span id="coins-display">120</span></div>
+    </div>
+
+    <div class="content">
+
+      <!-- WELCOME -->
+      <div id="s-welcome" class="screen-view active">
+        <div class="glass">
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:900;color:#fff">EcoScan ♻️</div>
+          <p style="margin-top:10px;font-size:14px;line-height:1.6;color:#fff;opacity:.9">
+            Plataforma Inteligente de Reciclaje impulsada por Claude Vision IA.
+          </p>
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <div class="tag">🤖 Claude IA</div>
+            <div class="tag">🪙 Rewards</div>
+            <div class="tag">🌱 Lima</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>🚀 Funciones activas</h3>
+          <div class="benefit-list">
+            ✅ Cámara real del dispositivo<br>
+            ✅ Claude Vision analiza tu foto<br>
+            ✅ Mapa interactivo de Lima<br>
+            ✅ EcoCoins y recompensas
+          </div>
+          <button class="btn" onclick="goTo('register')">Iniciar experiencia</button>
+        </div>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="s-register" class="screen-view">
+        <div class="card">
+          <h2>👤 Registro</h2>
+          <input type="text" id="inp-name" placeholder="Nombre completo"/>
+          <select id="inp-district">
+            <option value="">Selecciona tu distrito</option>
+            <option>Ancón</option><option>Ate</option><option>Barranco</option>
+            <option selected>Breña</option><option>Carabayllo</option>
+            <option>Chorrillos</option><option>Comas</option><option>El Agustino</option>
+            <option>Independencia</option><option>Jesús María</option>
+            <option>La Molina</option><option>La Victoria</option><option>Lima</option>
+            <option>Lince</option><option>Los Olivos</option><option>Lurigancho</option>
+            <option>Lurín</option><option>Magdalena del Mar</option>
+            <option>Miraflores</option><option>Pachacámac</option>
+            <option>Pueblo Libre</option><option>Puente Piedra</option>
+            <option>Rímac</option><option>San Borja</option><option>San Isidro</option>
+            <option>San Juan de Lurigancho</option><option>San Juan de Miraflores</option>
+            <option>San Luis</option><option>San Martín de Porres</option>
+            <option>San Miguel</option><option>Santa Anita</option>
+            <option>Santiago de Surco</option><option>Surquillo</option>
+            <option>Villa El Salvador</option><option>Villa María del Triunfo</option>
+          </select>
+          <div class="privacy-box">🔒 Datos protegidos. IA responsable.</div>
+          <button class="btn" onclick="doRegister()">Continuar</button>
+        </div>
+      </div>
+
+      <!-- SCAN -->
+      <div id="s-scan" class="screen-view">
+        <div class="glass">
+          <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">📷 Escaneo con IA</h2>
+          <p style="font-size:13px;color:#fff;opacity:.85">Distrito: <strong id="scan-district">—</strong></p>
+        </div>
+        <div class="card">
+          <div style="position:relative;height:260px;border-radius:20px;overflow:hidden;background:#000">
+            <video id="cam-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;border-radius:20px"></video>
+            <canvas id="snap" style="display:none"></canvas>
+            <div id="cam-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(6,95,70,.85);border-radius:20px;cursor:pointer" onclick="startCamera()">
+              <div style="font-size:44px;margin-bottom:10px">📷</div>
+              <div style="font-weight:600;font-size:14px;color:#fff">Toca para activar cámara</div>
+              <div style="font-size:11px;color:#fff;opacity:.75;margin-top:6px">Se solicitará permiso al dispositivo</div>
+            </div>
+          </div>
+          <div class="lime-box">🤖 Claude Vision analiza la imagen — apunta a cualquier residuo</div>
+          <button class="btn" id="btn-capture" onclick="captureAndAnalyze()">📸 Capturar y analizar con IA</button>
+          <button class="btn btn-blue" onclick="analyzeDemo()" style="margin-top:8px">🎲 Modo demo (sin cámara)</button>
+        </div>
+      </div>
+
+      <!-- PROCESSING -->
+      <div id="s-processing" class="screen-view">
+        <div class="card" style="text-align:center;padding:40px 20px">
+          <div style="font-size:60px;margin-bottom:16px">🤖</div>
+          <h2>Claude Vision analizando...</h2>
+          <p style="font-size:14px;color:#374151;margin-top:8px;line-height:1.6">
+            Identificando tipo de residuo, materiales y clasificación para Lima
+          </p>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+          <div class="ai-thinking">
+            <div class="dot-pulse"></div>
+            <span id="proc-status">Enviando imagen a Claude Vision...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div id="s-result" class="screen-view">
+        <div class="glass">
+          <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">✅ Resultado IA</h2>
+          <p style="font-size:13px;color:#fff;opacity:.85">Análisis real por Claude Vision</p>
+        </div>
+        <div class="card">
+          <div class="green-box">
+            <h3 id="res-item" style="color:#14532d;margin-bottom:8px">—</h3>
+            <p id="res-category" style="font-size:14px;color:#166534"></p>
+            <p id="res-coins" style="font-size:13px;color:#15803d;margin-top:6px"></p>
+            <p id="res-confidence" style="font-size:13px;color:#15803d"></p>
+          </div>
+          <div id="res-instructions" class="blue-box"></div>
+          <div id="res-details" class="gray-box"></div>
+          <button class="btn" onclick="goTo('map')">🗺️ Ver punto de reciclaje</button>
+          <button class="btn btn-blue" onclick="goTo('scan')" style="margin-top:8px">↩ Escanear otro</button>
+        </div>
+      </div>
+
+      <!-- MAP -->
+      <div id="s-map" class="screen-view">
+        <div class="card">
+          <h2>🗺️ Puntos de reciclaje</h2>
+          <p id="map-district-label" style="font-size:13px;color:#374151">Lima Metropolitana</p>
+          <div id="map-container"></div>
+          <div class="privacy-box" style="margin-top:12px;font-size:13px">📍 Puntos verdes = centros autorizados</div>
+          <button class="btn" onclick="goTo('dashboard')">Finalizar proceso</button>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="s-dashboard" class="screen-view">
+        <div class="glass">
+          <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">📊 Dashboard EcoScan</h2>
+          <p style="font-size:13px;color:#fff;opacity:.8">Tu huella ecológica</p>
+        </div>
+        <div class="card">
+          <div class="stat-grid">
+            <div class="stat-card" style="background:#fef9c3">
+              <div style="font-size:11px;color:#713f12;margin-bottom:4px">EcoCoins</div>
+              <div id="dash-coins" style="font-size:24px;font-weight:700;color:#713f12;font-family:'Syne',sans-serif">120</div>
+            </div>
+            <div class="stat-card" style="background:#dcfce7">
+              <div style="font-size:11px;color:#14532d;margin-bottom:4px">Nivel</div>
+              <div style="font-size:14px;font-weight:700;color:#14532d;font-family:'Syne',sans-serif;padding-top:4px">Eco Citizen</div>
+            </div>
+          </div>
+          <div class="dashboard-stats">
+            📦 Residuos escaneados: <span id="dash-scans" style="color:#166534;font-weight:600">0</span><br>
+            ♻️ Materiales reciclables: <span id="dash-rec" style="color:#166534;font-weight:600">0</span><br>
+            📈 Precisión IA promedio: <span id="dash-acc" style="color:#166534;font-weight:600">—</span>
+          </div>
+          <button class="btn" onclick="goTo('rewards')">🎁 Ver recompensas</button>
+        </div>
+      </div>
+
+      <!-- REWARDS -->
+      <div id="s-rewards" class="screen-view">
+        <div class="glass">
+          <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">🎁 Recompensas</h2>
+          <p style="font-size:13px;color:#fff;opacity:.8">Canjea tus EcoCoins</p>
+        </div>
+        <div id="rewards-list"></div>
+      </div>
+
+      <!-- HELP -->
+      <div id="s-help" class="screen-view">
+        <div class="card">
+          <h2>❓ Centro de Ayuda</h2>
+          <div class="gray-box" style="line-height:2;margin-top:14px">
+            🤖 IA: Claude Vision (Anthropic)<br>
+            🗺️ Mapa: Leaflet + OpenStreetMap<br>
+            🔒 Datos: solo locales, no se almacenan<br>
+            📷 Cámara: acceso solo durante escaneo<br>
+            📞 EcoScan Lima — Prototipo PMV
+          </div>
+        </div>
+      </div>
+
+    </div><!-- fin .content -->
+
+    <nav class="nav">
+      <button class="nav-btn" onclick="goTo('welcome')"><span class="ico">🏠</span><span>Inicio</span></button>
+      <button class="nav-btn" onclick="goTo('scan')"><span class="ico">📷</span><span>Escanear</span></button>
+      <button class="nav-btn" onclick="goTo('dashboard')"><span class="ico">📊</span><span>Panel</span></button>
+      <button class="nav-btn" onclick="goTo('rewards')"><span class="ico">🎁</span><span>Rewards</span></button>
+      <button class="nav-btn" onclick="goTo('help')"><span class="ico">❓</span><span>Ayuda</span></button>
+    </nav>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let ecoCoins=120,scanCount=0,recCount=0,accSum=0;
+let stream=null,mapInit=false,leafMap=null,lastDistrict="Breña";
+
+const districtCoords={
+  "Ancón":{lat:-11.607,lng:-77.155},"Ate":{lat:-12.025,lng:-76.927},
+  "Barranco":{lat:-12.152,lng:-77.022},"Breña":{lat:-12.057,lng:-77.053},
+  "Carabayllo":{lat:-11.879,lng:-77.026},"Chorrillos":{lat:-12.175,lng:-77.018},
+  "Comas":{lat:-11.938,lng:-77.054},"El Agustino":{lat:-12.046,lng:-76.993},
+  "Independencia":{lat:-11.992,lng:-77.057},"Jesús María":{lat:-12.073,lng:-77.047},
+  "La Molina":{lat:-12.076,lng:-76.944},"La Victoria":{lat:-12.065,lng:-77.011},
+  "Lima":{lat:-12.046,lng:-77.043},"Lince":{lat:-12.085,lng:-77.036},
+  "Los Olivos":{lat:-11.982,lng:-77.068},"Lurigancho":{lat:-11.977,lng:-76.879},
+  "Lurín":{lat:-12.274,lng:-76.887},"Magdalena del Mar":{lat:-12.09,lng:-77.066},
+  "Miraflores":{lat:-12.118,lng:-77.03},"Pachacámac":{lat:-12.241,lng:-76.852},
+  "Pueblo Libre":{lat:-12.075,lng:-77.062},"Puente Piedra":{lat:-11.864,lng:-77.072},
+  "Rímac":{lat:-12.025,lng:-77.03},"San Borja":{lat:-12.1,lng:-76.994},
+  "San Isidro":{lat:-12.097,lng:-77.035},"San Juan de Lurigancho":{lat:-12.003,lng:-76.996},
+  "San Juan de Miraflores":{lat:-12.157,lng:-76.972},"San Luis":{lat:-12.071,lng:-76.999},
+  "San Martín de Porres":{lat:-12.006,lng:-77.068},"San Miguel":{lat:-12.077,lng:-77.086},
+  "Santa Anita":{lat:-12.046,lng:-76.966},"Santiago de Surco":{lat:-12.138,lng:-76.993},
+  "Surquillo":{lat:-12.113,lng:-77.02},"Villa El Salvador":{lat:-12.212,lng:-76.944},
+  "Villa María del Triunfo":{lat:-12.168,lng:-76.937}
+};
+
+const ecoPoints=[
+  {name:"EcoPunto Breña",lat:-12.0565,lng:-77.053,type:"Municipal"},
+  {name:"Centro Reciclaje Miraflores",lat:-12.1183,lng:-77.0302,type:"Autorizado"},
+  {name:"EcoPunto San Isidro",lat:-12.0968,lng:-77.0351,type:"Municipal"},
+  {name:"Reciclaje San Borja",lat:-12.0999,lng:-76.9941,type:"Autorizado"},
+  {name:"Centro Verde Surco",lat:-12.1378,lng:-76.9932,type:"Autorizado"},
+  {name:"EcoPunto Los Olivos",lat:-11.982,lng:-77.0676,type:"Municipal"},
+  {name:"Comas Recicla",lat:-11.9384,lng:-77.0542,type:"Municipal"},
+  {name:"EcoPunto SJL",lat:-12.0034,lng:-76.9963,type:"Autorizado"},
+  {name:"Reciclaje La Molina",lat:-12.0759,lng:-76.9444,type:"Autorizado"},
+  {name:"Centro Verde Barranco",lat:-12.1521,lng:-77.0218,type:"Municipal"}
+];
+
+const rewards=[
+  {title:"Cupón EcoMarket",pts:100,emoji:"🛒",bg:"#dcfce7",tc:"#14532d"},
+  {title:"Descuento Café Verde",pts:150,emoji:"☕",bg:"#dbeafe",tc:"#1e3a8a"},
+  {title:"Plantación de Árbol",pts:200,emoji:"🌳",bg:"#fef9c3",tc:"#713f12"},
+  {title:"Kit Ecológico",pts:300,emoji:"♻️",bg:"#fae8ff",tc:"#581c87"}
+];
+
+function updateCoins(v){
+  ecoCoins=v;
+  document.getElementById("coins-display").textContent=v;
+  document.getElementById("dash-coins").textContent=v;
+}
+
+function goTo(screen){
+  document.querySelectorAll(".screen-view").forEach(el=>el.classList.remove("active"));
+  document.getElementById("s-"+screen).classList.add("active");
+  if(screen==="map") initMap();
+  if(screen==="rewards") renderRewards();
+  if(screen==="scan") document.getElementById("scan-district").textContent=lastDistrict;
+}
+
+function doRegister(){
+  const d=document.getElementById("inp-district").value;
+  if(!d){alert("Selecciona tu distrito");return;}
+  lastDistrict=d;
+  goTo("scan");
+}
+
+async function startCamera(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment",width:{ideal:640},height:{ideal:480}},
+      audio:false
+    });
+    const vid=document.getElementById("cam-video");
+    vid.srcObject=stream;
+    document.getElementById("cam-overlay").style.display="none";
+  }catch(e){
+    const ov=document.getElementById("cam-overlay");
+    ov.innerHTML='<div style="font-size:36px">⚠️</div><div style="font-weight:600;color:#fff;font-size:14px;margin-top:8px">Sin acceso a cámara</div><div style="font-size:11px;color:#fff;opacity:.75;margin-top:6px">Usa el botón "Modo demo" abajo</div>';
+    ov.onclick=null;
+  }
+}
+
+async function captureAndAnalyze(){
+  const vid=document.getElementById("cam-video");
+  if(!stream&&!vid.srcObject){analyzeDemo();return;}
+  const canvas=document.getElementById("snap");
+  canvas.width=vid.videoWidth||320;
+  canvas.height=vid.videoHeight||240;
+  canvas.getContext("2d").drawImage(vid,0,0);
+  const b64=canvas.toDataURL("image/jpeg",0.8).split(",")[1];
+  await callAI(b64);
+}
+
+// ── LLAMA AL PROXY DE VERCEL (/api/analyze) CON IMAGEN REAL ──
+async function callAI(imageBase64){
+  goTo("processing");
+  setStatus("Enviando imagen a Claude Vision...");
+  try{
+    const resp=await fetch("/api/analyze",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({image:imageBase64})
+    });
+    const data=await resp.json();
+    if(data.error){console.error("API error:",data.error);useFallback();return;}
+    const text=data.content.map(i=>i.text||"").join("");
+    processResult(text);
+  }catch(e){
+    console.error("Fetch error:",e);
+    useFallback();
+  }
+}
+
+// ── MODO DEMO (llama al proxy sin imagen, solo con texto) ──
+async function analyzeDemo(){
+  goTo("processing");
+  setStatus("Generando análisis demo con Claude...");
+  const demos=["botella de plástico PET transparente","caja de cartón corrugado","lata de aluminio de bebida","tarro de vidrio","restos de comida orgánica","papel periódico","vaso de tecnopor","bolsa de plástico"];
+  const pick=demos[Math.floor(Math.random()*demos.length)];
+  try{
+    const resp=await fetch("/api/analyze",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({demo_item:pick})
+    });
+    const data=await resp.json();
+    if(data.error){useFallback();return;}
+    const text=data.content.map(i=>i.text||"").join("");
+    processResult(text);
+  }catch(e){useFallback();}
+}
+
+function useFallback(){
+  const items=[
+    {item:"Botella PET",recyclable:true,category:"Plástico",confidence:90,color_bin:"Azul",coins:15,instructions:"Lavar, retirar tapa y aplanar. Depositar en contenedor azul.",details:"El PET es reciclable en Lima. Empresas como CIMA lo transforman en fibra textil o nuevas botellas."},
+    {item:"Caja de cartón",recyclable:true,category:"Cartón",confidence:95,color_bin:"Azul",coins:12,instructions:"Desdoblar y eliminar cintas adhesivas antes de depositar.",details:"El cartón es uno de los materiales más reciclados en Lima."},
+    {item:"Lata de aluminio",recyclable:true,category:"Metal",confidence:98,color_bin:"Azul",coins:20,instructions:"Aplastar para reducir volumen.",details:"El aluminio reciclado ahorra 95% de energía vs producción nueva."},
+    {item:"Residuo orgánico",recyclable:false,category:"Orgánico",confidence:88,color_bin:"Marrón",coins:5,instructions:"Depositar en contenedor marrón o compostar en casa.",details:"Varios distritos de Lima tienen programas de compostaje."}
+  ];
+  showResult(items[Math.floor(Math.random()*items.length)]);
+}
+
+function setStatus(msg){const el=document.getElementById("proc-status");if(el)el.textContent=msg;}
+
+function processResult(text){
+  try{
+    const clean=text.replace(/```json|```/g,"").trim();
+    showResult(JSON.parse(clean));
+  }catch(e){console.error("Parse error:",e,text);useFallback();}
+}
+
+function showResult(r){
+  document.getElementById("res-item").textContent=(r.recyclable?"♻️ ":"🚫 ")+r.item;
+  document.getElementById("res-category").textContent="Categoría: "+r.category+(r.color_bin?" · Contenedor "+r.color_bin:"");
+  const gained=r.coins||10;
+  updateCoins(ecoCoins+gained);
+  document.getElementById("res-coins").textContent="🪙 EcoCoins ganadas: +"+gained;
+  document.getElementById("res-confidence").textContent="📊 Confianza IA: "+r.confidence+"%";
+  document.getElementById("res-instructions").textContent="💡 "+(r.instructions||"Depositar en contenedor adecuado");
+  document.getElementById("res-details").textContent=r.details||"Material analizado.";
+  scanCount++;
+  if(r.recyclable) recCount++;
+  accSum+=r.confidence;
+  document.getElementById("dash-scans").textContent=scanCount;
+  document.getElementById("dash-rec").textContent=recCount;
+  document.getElementById("dash-acc").textContent=Math.round(accSum/scanCount)+"%";
+  goTo("result");
+}
+
+function initMap(){
+  if(mapInit) return;
+  mapInit=true;
+  const dc=districtCoords[lastDistrict]||{lat:-12.057,lng:-77.053};
+  leafMap=L.map("map-container",{zoomControl:true,attributionControl:false}).setView([dc.lat,dc.lng],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(leafMap);
+  const greenIcon=L.divIcon({html:'<div style="background:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8],className:""});
+  const userIcon=L.divIcon({html:'<div style="background:#3b82f6;width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(59,130,246,.6)"></div>',iconSize:[22,22],iconAnchor:[11,11],className:""});
+  L.marker([dc.lat,dc.lng],{icon:userIcon}).addTo(leafMap).bindPopup("<strong>📍 Tu ubicación</strong><br>"+lastDistrict).openPopup();
+  ecoPoints.forEach(p=>{L.marker([p.lat,p.lng],{icon:greenIcon}).addTo(leafMap).bindPopup("<strong>♻️ "+p.name+"</strong><br><small>"+p.type+"</small>")});
+  document.getElementById("map-district-label").textContent="Lima Metropolitana · Tu distrito: "+lastDistrict;
+  setTimeout(()=>leafMap.invalidateSize(),300);
+}
+
+function renderRewards(){
+  document.getElementById("rewards-list").innerHTML=rewards.map(r=>`
+    <div style="background:${r.bg};border-radius:20px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700;font-family:'Syne',sans-serif;color:${r.tc};font-size:15px">${r.emoji} ${r.title}</div>
+          <div style="font-size:13px;color:${r.tc};margin-top:4px;opacity:.85">${r.pts} EcoCoins</div>
+        </div>
+        <button class="btn-sm" style="background:${ecoCoins>=r.pts?"#16a34a":"#9ca3af"}" onclick="canjear(${r.pts},'${r.title}')">
+          ${ecoCoins>=r.pts?"Canjear":"🔒"}
+        </button>
+      </div>
+    </div>`).join("");
+}
+
+function canjear(pts,name){
+  if(ecoCoins<pts){alert("No tienes suficientes EcoCoins");return;}
+  if(confirm('¿Canjear "'+name+'" por '+pts+' EcoCoins?')){
+    updateCoins(ecoCoins-pts);
+    alert("✅ ¡Canjeado! Revisa tu email para el código.");
+    renderRewards();
+  }
+}
+</script>
+</body>
+</html>
