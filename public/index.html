@@ -338,10 +338,12 @@ async function captureAndAnalyze(){
   const vid=document.getElementById("cam-video");
   if(!stream&&!vid.srcObject){analyzeDemo();return;}
   const canvas=document.getElementById("snap");
-  canvas.width=vid.videoWidth||320;
-  canvas.height=vid.videoHeight||240;
+  // Mayor resolución para mejor reconocimiento
+  canvas.width=vid.videoWidth||640;
+  canvas.height=vid.videoHeight||480;
   canvas.getContext("2d").drawImage(vid,0,0);
-  const b64=canvas.toDataURL("image/jpeg",0.8).split(",")[1];
+  // Mejor calidad de imagen (0.95 en vez de 0.8)
+  const b64=canvas.toDataURL("image/jpeg",0.95).split(",")[1];
   await callAI(b64);
 }
 
