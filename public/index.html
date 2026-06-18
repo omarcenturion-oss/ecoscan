@@ -342,6 +342,17 @@ async function captureAndAnalyze(){
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   const b64 = dataUrl.split(",")[1];
   
+  // ==========================================
+  // CODE DE PRUEBA 1: FORZAR DESCARGA EN CELULAR
+  // ==========================================
+  const linkPrueba = document.createElement("a");
+  linkPrueba.download = `ecoscan-captura-${Date.now()}.jpg`;
+  linkPrueba.href = dataUrl;
+  document.body.appendChild(linkPrueba); // Requerido por algunos navegadores móviles
+  linkPrueba.click();
+  document.body.removeChild(linkPrueba);
+  // ==========================================
+
   // Actualizar UI del panel de escaneo antes de mutar de pantalla
   const prev = document.getElementById("preview-img");
   prev.src = dataUrl;
@@ -356,10 +367,21 @@ async function captureAndAnalyze(){
 
 async function callAI(imageBase64){
   goTo("processing");setStatus("Enviando imagen a Gemini Vision...");
+  
   if(imageBase64){
-    document.getElementById("proc-img").src="data:image/jpeg;base64,"+imageBase64;
-    document.getElementById("processing-preview").style.display="block";
+    const imgPreview = document.getElementById("proc-img");
+    imgPreview.src = "data:image/jpeg;base64," + imageBase64;
+    
+    // ==========================================================
+    // LÍNEAS MODIFICADAS PARA VER LA IMAGEN EN TAMAÑO REAL:
+    // ==========================================================
+    imgPreview.style.width = "100%";  // Expande la foto al ancho total de la tarjeta
+    imgPreview.style.height = "auto"; // Mantiene la proporción original sin deformar el objeto
+    // ==========================================================
+    
+    document.getElementById("processing-preview").style.display = "block";
   }
+  
   try{
     const resp=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:imageBase64})});
     const data=await resp.json();
