@@ -74,7 +74,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
     </div>
     <div class="content">
 
-      <!-- WELCOME -->
       <div id="s-welcome" class="screen-view active">
         <div class="glass">
           <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:900;color:#fff">EcoScan ♻️</div>
@@ -92,7 +91,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- REGISTER -->
       <div id="s-register" class="screen-view">
         <div class="card">
           <h2>👤 Registro</h2>
@@ -115,7 +113,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- SCAN -->
       <div id="s-scan" class="screen-view">
         <div class="glass">
           <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:4px">📷 Escaneo con IA</h2>
@@ -148,7 +145,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- PROCESSING -->
       <div id="s-processing" class="screen-view">
         <div class="card" style="text-align:center;padding:40px 20px">
           <div style="font-size:60px;margin-bottom:16px">🤖</div>
@@ -162,7 +158,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- RESULT -->
       <div id="s-result" class="screen-view">
         <div class="glass">
           <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">✅ Resultado IA</h2>
@@ -182,7 +177,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- MAP -->
       <div id="s-map" class="screen-view">
         <div class="card">
           <h2>🗺️ Puntos de reciclaje</h2>
@@ -193,7 +187,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- DASHBOARD -->
       <div id="s-dashboard" class="screen-view">
         <div class="glass">
           <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">📊 Dashboard EcoScan</h2>
@@ -219,7 +212,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         </div>
       </div>
 
-      <!-- REWARDS -->
       <div id="s-rewards" class="screen-view">
         <div class="glass">
           <h2 style="color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">🎁 Recompensas</h2>
@@ -228,7 +220,6 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
         <div id="rewards-list"></div>
       </div>
 
-      <!-- HELP -->
       <div id="s-help" class="screen-view">
         <div class="card">
           <h2>❓ Centro de Ayuda</h2>
@@ -277,6 +268,10 @@ function goTo(screen){
     if(stream){
       document.getElementById("focus-guide").style.display="block";
       document.getElementById("focus-label").style.display="block";
+    } else {
+      document.getElementById("cam-overlay").style.display="flex";
+      document.getElementById("focus-guide").style.display="none";
+      document.getElementById("focus-label").style.display="none";
     }
   }
 }
@@ -289,8 +284,13 @@ function doRegister(){
 
 async function startCamera(){
   try{
+    // Forzamos requerimientos de resolución nativa para mitigar errores de lectura multimodal
     stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},
+      video:{
+        facingMode:{ideal:"environment"},
+        width:{ideal:1280},
+        height:{ideal:720}
+      },
       audio:false
     });
     const vid=document.getElementById("cam-video");
@@ -302,6 +302,7 @@ async function startCamera(){
       document.getElementById("focus-label").style.display="block";
     };
   }catch(e){
+    console.error("Error al acceder a la cámara:", e);
     const ov=document.getElementById("cam-overlay");
     ov.innerHTML='<div style="font-size:36px">⚠️</div><div style="font-weight:700;color:#fff;font-size:14px;margin-top:8px">Sin acceso a cámara</div><div style="font-size:11px;color:#fff;opacity:.75;margin-top:6px;text-align:center;padding:0 16px">Usa el botón Modo demo</div>';
     ov.onclick=null;
@@ -312,36 +313,36 @@ async function captureAndAnalyze(){
   const vid = document.getElementById("cam-video");
   if (!stream || !vid.srcObject) { analyzeDemo(); return; }
   
-  // 1. Forzar al navegador a registrar las dimensiones reales del stream de video activo
-  const videoWidth = vid.videoWidth;
-  const videoHeight = vid.videoHeight;
+  // Capturamos las dimensiones reales actuales en caliente
+  let videoWidth = vid.videoWidth;
+  let videoHeight = vid.videoHeight;
   
-  // Validación de seguridad: Si las dimensiones son inválidas, reintentar tras un breve delay
+  // Fallback seguro en caso de retraso de metadatos en dispositivos móviles específicos
   if (videoWidth === 0 || videoHeight === 0) {
-    setTimeout(captureAndAnalyze, 100);
-    return;
+    videoWidth = 1280;
+    videoHeight = 720;
   }
 
-  // 2. Efecto visual de Flash
+  // Efecto visual de Flash
   const flash = document.getElementById("cam-flash");
   flash.classList.add("active");
   setTimeout(() => flash.classList.remove("active"), 150);
   
-  // 3. Configurar el Canvas EXACTAMENTE con la resolución nativa de la cámara
+  // Configurar Canvas de renderizado intermedio
   const canvas = document.getElementById("snap");
   canvas.width = videoWidth;
   canvas.height = videoHeight;
   
   const ctx = canvas.getContext("2d");
   
-  // 4. Capturar el cuadro limpio del elemento de video
+  // Captura estricta del cuadro en foco del elemento de video
   ctx.drawImage(vid, 0, 0, videoWidth, videoHeight);
   
-  // 5. Convertir a JPEG comprimido pero nítido (calidad 0.85 es ideal para Gemini Vision)
+  // Conversión limpia a base64 con compresión optimizada para lectura de texturas visuales
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   const b64 = dataUrl.split(",")[1];
   
-  // 6. Mostrar la vista previa exacta de lo que se le enviará a la IA
+  // Actualizar UI del panel de escaneo antes de mutar de pantalla
   const prev = document.getElementById("preview-img");
   prev.src = dataUrl;
   prev.style.display = "block";
@@ -349,7 +350,7 @@ async function captureAndAnalyze(){
   document.getElementById("focus-guide").style.display = "none";
   document.getElementById("focus-label").style.display = "none";
   
-  // Enviar el base64 real y verificado
+  // Enviar a la tubería de análisis de la API de Gemini
   await callAI(b64);
 }
 
