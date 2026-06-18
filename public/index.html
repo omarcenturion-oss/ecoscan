@@ -309,21 +309,47 @@ async function startCamera(){
 }
 
 async function captureAndAnalyze(){
-  const vid=document.getElementById("cam-video");
-  if(!stream||!vid.srcObject){analyzeDemo();return;}
-  const flash=document.getElementById("cam-flash");
+  const vid = document.getElementById("cam-video");
+  if (!stream || !vid.srcObject) { analyzeDemo(); return; }
+  
+  // 1. Forzar al navegador a registrar las dimensiones reales del stream de video activo
+  const videoWidth = vid.videoWidth;
+  const videoHeight = vid.videoHeight;
+  
+  // Validación de seguridad: Si las dimensiones son inválidas, reintentar tras un breve delay
+  if (videoWidth === 0 || videoHeight === 0) {
+    setTimeout(captureAndAnalyze, 100);
+    return;
+  }
+
+  // 2. Efecto visual de Flash
+  const flash = document.getElementById("cam-flash");
   flash.classList.add("active");
-  setTimeout(()=>flash.classList.remove("active"),150);
-  const canvas=document.getElementById("snap");
-  canvas.width=vid.videoWidth||1280;
-  canvas.height=vid.videoHeight||720;
-  canvas.getContext("2d").drawImage(vid,0,0);
-  const dataUrl=canvas.toDataURL("image/jpeg",0.92);
-  const b64=dataUrl.split(",")[1];
-  const prev=document.getElementById("preview-img");
-  prev.src=dataUrl;prev.style.display="block";
-  document.getElementById("focus-guide").style.display="none";
-  document.getElementById("focus-label").style.display="none";
+  setTimeout(() => flash.classList.remove("active"), 150);
+  
+  // 3. Configurar el Canvas EXACTAMENTE con la resolución nativa de la cámara
+  const canvas = document.getElementById("snap");
+  canvas.width = videoWidth;
+  canvas.height = videoHeight;
+  
+  const ctx = canvas.getContext("2d");
+  
+  // 4. Capturar el cuadro limpio del elemento de video
+  ctx.drawImage(vid, 0, 0, videoWidth, videoHeight);
+  
+  // 5. Convertir a JPEG comprimido pero nítido (calidad 0.85 es ideal para Gemini Vision)
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+  const b64 = dataUrl.split(",")[1];
+  
+  // 6. Mostrar la vista previa exacta de lo que se le enviará a la IA
+  const prev = document.getElementById("preview-img");
+  prev.src = dataUrl;
+  prev.style.display = "block";
+  
+  document.getElementById("focus-guide").style.display = "none";
+  document.getElementById("focus-label").style.display = "none";
+  
+  // Enviar el base64 real y verificado
   await callAI(b64);
 }
 
