@@ -313,14 +313,14 @@ async function captureAndAnalyze(){
   const vid = document.getElementById("cam-video");
   if (!stream || !vid.srcObject) { analyzeDemo(); return; }
   
-  // Capturamos las dimensiones reales actuales en caliente
-  let videoWidth = vid.videoWidth;
-  let videoHeight = vid.videoHeight;
+  // CAPTURA MEJORADA: Detecta si el video está usando sus dimensiones reales o las del elemento renderizado
+  let videoWidth = vid.videoWidth || vid.clientWidth;
+  let videoHeight = vid.videoHeight || vid.clientHeight;
   
-  // Fallback seguro en caso de retraso de metadatos en dispositivos móviles específicos
+  // Si sigue viniendo en 0, usamos una proporción vertical estándar de celular (720x1280) en vez de horizontal
   if (videoWidth === 0 || videoHeight === 0) {
-    videoWidth = 1280;
-    videoHeight = 720;
+    videoWidth = 720;
+    videoHeight = 1280;
   }
 
   // Efecto visual de Flash
@@ -328,32 +328,29 @@ async function captureAndAnalyze(){
   flash.classList.add("active");
   setTimeout(() => flash.classList.remove("active"), 150);
   
-  // Configurar Canvas de renderizado intermedio
+  // Configurar Canvas respetando la orientación real
   const canvas = document.getElementById("snap");
   canvas.width = videoWidth;
   canvas.height = videoHeight;
   
   const ctx = canvas.getContext("2d");
   
-  // Captura estricta del cuadro en foco del elemento de video
+  // Captura estricta del cuadro
   ctx.drawImage(vid, 0, 0, videoWidth, videoHeight);
   
-  // Conversión limpia a base64 con compresión optimizada para lectura de texturas visuales
+  // Conversión limpia a base64
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   const b64 = dataUrl.split(",")[1];
   
-  // ==========================================
-  // CODE DE PRUEBA 1: FORZAR DESCARGA EN CELULAR
-  // ==========================================
+  // CÓDIGO DE PRUEBA: Puedes dejar activa la descarga o comentarla si ya no la necesitas
   const linkPrueba = document.createElement("a");
   linkPrueba.download = `ecoscan-captura-${Date.now()}.jpg`;
   linkPrueba.href = dataUrl;
-  document.body.appendChild(linkPrueba); // Requerido por algunos navegadores móviles
+  document.body.appendChild(linkPrueba);
   linkPrueba.click();
   document.body.removeChild(linkPrueba);
-  // ==========================================
 
-  // Actualizar UI del panel de escaneo antes de mutar de pantalla
+  // Actualizar UI del panel de escaneo
   const prev = document.getElementById("preview-img");
   prev.src = dataUrl;
   prev.style.display = "block";
