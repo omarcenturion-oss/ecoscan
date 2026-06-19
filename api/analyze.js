@@ -6,34 +6,31 @@ export default async function handler(req, res) {
   const { image, demo_item } = req.body;
   const GEMINI_KEY = process.env.GEMINI_KEY;
 
-  // Definimos las reglas del sistema de forma estricta
-  const systemInstruction = `Eres un experto en clasificación de residuos sólidos en Lima, Perú.
-Tu única tarea es analizar visualmente el residuo proporcionado y clasificarlo de forma ultra precisa.
+  const systemInstruction = `Eres un experto en clasificación estricta de residuos sólidos para iniciativas ambientales en Lima, Perú.
+Tu única tarea es analizar visualmente la imagen proporcionada y clasificar de forma fidedigna los materiales.
 
-REGLAS DE CLASIFICACIÓN:
-- Papel/cartón: hojas, cajas, periódicos, revistas, sobres → color_bin: Azul
-- Plástico PET: botellas transparentes de agua/bebidas → color_bin: Azul  
-- Plástico duro: envases de shampoo, detergente → color_bin: Azul
-- Vidrio: botellas, frascos → color_bin: Verde
-- Metal/aluminio: latas, tapas → color_bin: Azul
-- Orgánico: restos de comida, cáscaras → color_bin: Marrón
-- Tecnopor: color_bin: Rojo (no reciclable en Lima)
-- Bolsas plásticas: color_bin: Rojo (difícil reciclaje)
+REGLAS DE CLASIFICACIÓN URBANAS:
+- Papel/cartón: hojas, cajas de embalajes, periódicos, revistas, sobres → color_bin: Azul
+- Plástico PET: botellas transparentes de agua o bebidas gaseosas → color_bin: Azul  
+- Plástico duro: envases de shampoo, detergente o tapitas → color_bin: Azul
+- Vidrio: botellas, jarras transparentes, vasos de vidrio, frascos → color_bin: Verde
+- Metal/aluminio: latas de bebidas, latas de conserva, tapas metálicas → color_bin: Azul
+- Orgánico: restos de comida, cáscaras de fruta, verduras, hojas secas → color_bin: Marrón
+- Tecnopor: vasos, bandejas de tecnopor blanco → color_bin: Rojo (no reciclable en Lima)
+- Bolsas plásticas: bolsas de mercado, empaques flexibles → color_bin: Rojo (difícil reciclaje)
 
-IMPORTANTE: 
-- Si ves hojas de papel blanco o cuadernos → item: "Hojas de papel bond", category: "Papel", color_bin: "Azul"
-- Si ves caja de cartón → item: "Caja de cartón", category: "Cartón", color_bin: "Azul"
-- Si ves botella plástica → item: "Botella plástica PET", category: "Plástico", color_bin: "Azul"
-- Sé MUY específico con lo que realmente ves en la imagen. No inventes materiales metálicos si el objeto es blanco o traslúcido.
+REGLAS CRÍTICAS DE ENFOQUE MULTIMODAL:
+1. Analiza con MÁXIMO detalle visual la transparencia, los bordes y el reflejo de la luz.
+2. Si el objeto es translúcido, transparente o muestra el fondo a través de él, clasifícalo como Vidrio ("category": "Vidrio", "color_bin": "Verde") o Plástico PET según corresponda. NO lo confundas con una lata de aluminio opaca.
+3. Sé muy específico con el nombre del residuo real.
 
-Responde SOLO con este JSON exacto, sin backticks (\`\`\`), sin la palabra "json", sin texto adicional:
+Responde ÚNICAMENTE con esta estructura JSON pura, sin bloques de texto markdown, sin envolver en caracteres de comillas invertidas (\`\`\`) ni la palabra "json":
 {"item":"nombre muy específico de lo que ves","recyclable":true,"category":"Papel/Cartón/Plástico/Vidrio/Metal/Orgánico/Electrónico","confidence":95,"color_bin":"Azul/Verde/Marrón/Rojo/Negro","coins":15,"instructions":"instrucción práctica para Lima","details":"explicación de 2 líneas sobre reciclaje en Lima"}`;
 
   try {
     let body;
 
     if (image) {
-      // Flujo con CÁMARA REAL (Multimodal)
       body = {
         systemInstruction: {
           parts: [{ text: systemInstruction }]
@@ -41,23 +38,22 @@ Responde SOLO con este JSON exacto, sin backticks (\`\`\`), sin la palabra "json
         contents: [{
           parts: [
             { inline_data: { mime_type: "image/jpeg", data: image } },
-            { text: "Analiza minuciosamente esta imagen. Identifica el material predominante del objeto céntrico y devuélvelo en el formato JSON solicitado." }
+            { text: "Analiza minuciosamente el objeto céntrico de la imagen. Identifica con precisión su material (observa si es transparente como vidrio o plástico, u opaco como metal) y mapea las reglas correspondientes al JSON solicitado." }
           ]
         }],
         generationConfig: {
-          temperature: 0.1, // Mantenemos la temperatura baja para evitar alucinaciones
+          temperature: 0.1,
           maxOutputTokens: 500,
-          responseMimeType: "application/json" // Forzamos a Gemini a responder en formato JSON nativo
+          responseMimeType: "application/json"
         }
       };
     } else {
-      // Flujo en MODO DEMO (Texto)
       body = {
         systemInstruction: {
           parts: [{ text: systemInstruction }]
         },
         contents: [{
-          parts: [{ text: `El usuario no envió una foto. Clasifica estrictamente el siguiente texto ficticio: "${demo_item}".` }]
+          parts: [{ text: `Clasifica estrictamente el siguiente texto ficticio simulado: "${demo_item}".` }]
         }],
         generationConfig: {
           temperature: 0.1,
@@ -78,14 +74,11 @@ Responde SOLO con este JSON exacto, sin backticks (\`\`\`), sin la palabra "json
 
     const data = await response.json();
     
-    // Si la API devuelve un error estructural
     if (data.error) {
-      throw new Error(data.error.message || "Error en la API de Gemini");
+      throw new Error(data.error.message || "Error devuelto por la API de Gemini");
     }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    
-    // Al usar responseMimeType: "application/json", el texto ya viene limpio sin bloques de Markdown (\`\`\`json)
     const clean = text.trim();
     const parsed = JSON.parse(clean);
 
@@ -94,7 +87,7 @@ Responde SOLO con este JSON exacto, sin backticks (\`\`\`), sin la palabra "json
     });
 
   } catch (e) {
-    console.error("Error en el Handler:", e.message);
+    console.error("Error en Tubería de Análisis:", e.message);
     res.status(500).json({ error: e.message });
   }
 }
