@@ -143,8 +143,11 @@ input:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,9
           
           <button class="btn" onclick="captureAndAnalyze()">📸 Capturar y analizar</button>
           
-          <input type="file" id="gallery-input" accept="image/*" style="display:none" onchange="uploadFromGallery(event)"/>
-          <button class="btn btn-blue" onclick="document.getElementById('gallery-input').click()" style="margin-top:8px">🖼️ Subir desde Galería</button>
+          <!-- Input nativo estilizado como botón para asegurar compatibilidad total en PC y Celulares -->
+          <label for="gallery-input" class="btn btn-blue" style="display: block; text-align: center; margin-top: 8px; cursor: pointer; line-height: 1.2;">
+            🖼️ Seleccionar de Galería / PC
+          </label>
+          <input type="file" id="gallery-input" accept="image/*" onchange="uploadFromGallery(event)" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;"/>
           
           <button class="btn" onclick="analyzeDemo()" style="margin-top:8px; background: #475569;">🎲 Modo demo (sin cámara)</button>
         </div>
